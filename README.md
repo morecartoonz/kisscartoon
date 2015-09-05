@@ -24,9 +24,13 @@ Those Operators are freely combinable
 # Requirements
 
 Python :
-* cfscrape
-* BeautifulSoup4 ( bs4 )
-* pySmartDL
+
+* [cfscrape](https://github.com/Anorov/cloudflare-scrape/)
+  * requests
+  * PyExecJS
+  * A JavaScript Engine (Like Node or PyV8)
+* [BeautifulSoup4 ( bs4 )](https://pypi.python.org/pypi/beautifulsoup4)
+* [pySmartDL](https://pypi.python.org/pypi/pySmartDL/)
 
 All of the dependencies are available via pip and easy_install
 
