@@ -24,9 +24,9 @@ Those Operators are freely combinable
 # Requirements
 
 Python :
-# cfscrape
-# BeautifulSoup4 ( bs4 )
-# pySmartDL
+* cfscrape
+* BeautifulSoup4 ( bs4 )
+* pySmartDL
 
 All of the dependencies are available via pip and easy_install
 
