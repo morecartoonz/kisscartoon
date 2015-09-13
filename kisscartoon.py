@@ -5,7 +5,6 @@ from bs4 import BeautifulSoup
 import cfscrape
 from pySmartDL import SmartDL
 import os.path
-import sys
 import argparse
 
 
@@ -24,7 +23,7 @@ def get_episodes(url):
     return links
 
 
-def get_episode(url, quiet=False):
+def get_episode(url, quiet=False, quality=False):
     html = scraper.get(url).content
     soup = BeautifulSoup(html, "lxml")
     link = soup.find("select", {"id": "selectQuality"})
@@ -36,25 +35,33 @@ def get_episode(url, quiet=False):
         quali.append(src.text)
         dlinks.append(base64.b64decode(src.get('value')))
     if not quiet:
-        print("Quality : " + quali[0])
+        if quality:
+            print("Quality : " + quali[len(quali)-1])
+        else:
+            print("Quality : " + quali[0])
     return dlinks
 
 
 def download(url, name, quiet = False):
-    path = ".\\%s" % name
+    path = ".%s%s" % (os.sep, name)
     if os.path.isfile(path):
         if not quiet:
             print "Skipping %s" % name
         return
     else:
-        obj = SmartDL(url, ".\\%s" % name)
-        obj.start()
+        obj = SmartDL(url, path)
+        try:
+            obj.start()
+        except KeyboardInterrupt:
+            obj.stop()
+
 
 
 parser = argparse.ArgumentParser()
 parser.add_argument("show")
 parser.add_argument("-l","--only-links", help="only print's the links. doesn't download the files.", action="store_true")
 parser.add_argument("-s","--save-links", help="saves the links to links.txt", action="store_true")
+parser.add_argument("-a","--low-quality", help="reduces the quality", action="store_true")
 parser.add_argument("-q","--quiet", help="shut's up", action="store_true")
 args = parser.parse_args()
 
@@ -73,8 +80,11 @@ for episode in list(reversed(get_episodes(show))):
     episodename = episode.split("/")[-1].split("?")[0] + ".mp4"
     if not args.quiet:
         print "Episode : %s" % episodename
-
-    link = get_episode(episode, args.quiet)[0]
+    qualitys = get_episode(episode, args.quiet, args.low_quality)
+    if args.low_quality:
+        link = qualitys[len(qualitys)-1]
+    else:
+        link = qualitys[0]
 
     if args.only_links:
         print(link)
