@@ -8,7 +8,7 @@ import os.path
 import argparse
 
 
-def get_episodes(url):
+def get_episodes(url, kissanime=False):
     html = scraper.get(url).content
     soup = BeautifulSoup(html, "lxml")
 
@@ -19,7 +19,10 @@ def get_episodes(url):
     links = []
 
     for link in tablesoup.findAll('a'):
-        links.append("%s%s" % ("http://kisscartoon.me", link.get('href')))
+        if kissanime:
+            links.append("%s%s" % ("http://kissanime.com", link.get('href')))
+        else:
+            links.append("%s%s" % ("http://kisscartoon.me", link.get('href')))
     return links
 
 
@@ -27,7 +30,6 @@ def get_episode(url, quiet=False, quality=False):
     html = scraper.get(url).content
     soup = BeautifulSoup(html, "lxml")
     link = soup.find("select", {"id": "selectQuality"})
-
     valuesoup = BeautifulSoup(str(link), "lxml")
     dlinks = []
     quali = []
@@ -76,7 +78,7 @@ if not args.quiet:
 
 links = []
 
-for episode in list(reversed(get_episodes(show))):
+for episode in list(reversed(get_episodes(show, "kissanime" in show))):
     episodename = episode.split("/")[-1].split("?")[0] + ".mp4"
     if not args.quiet:
         print "Episode : %s" % episodename
