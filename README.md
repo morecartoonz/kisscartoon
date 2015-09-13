@@ -7,6 +7,7 @@ Get's and downloads Videos from Kisscartoon and Kissanime
 * Download can now be canceled with Ctrl + C
 * Added low quality video feature
 * Fixed a bug that made the Script crash on OS'es that aren't Windows.
+* Added Kissanime Support
 
 # Usage
 
