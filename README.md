@@ -1,6 +1,6 @@
-# Kisscartoon Batch Downloader
+# Kisscartoon and Kissanime Batch Downloader
 
-Get's and downloads Videos from Kisscartoon
+Get's and downloads Videos from Kisscartoon and Kissanime
 
 # Changelog
 
