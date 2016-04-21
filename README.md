@@ -4,10 +4,7 @@ Get's and downloads Videos from Kisscartoon and Kissanime
 
 # Changelog
 
-* Download can now be canceled with Ctrl + C
-* Added low quality video feature
-* Fixed a bug that made the Script crash on OS'es that aren't Windows.
-* Added Kissanime Support
+* Updated Link Decryption
 
 # Usage
 
@@ -46,6 +43,7 @@ Python :
   * A JavaScript Engine (Like Node or PyV8)
 * [BeautifulSoup4 ( bs4 )](https://pypi.python.org/pypi/beautifulsoup4)
 * [pySmartDL](https://pypi.python.org/pypi/pySmartDL/)
+* [pyCrypto](https://pypi.python.org/pypi/pycrypto)
 
 All of the dependencies are available via pip and easy_install
 

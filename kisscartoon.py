@@ -1,12 +1,54 @@
 __author__ = 'Jan'
-import base64
-
 from bs4 import BeautifulSoup
 import cfscrape
 from pySmartDL import SmartDL
 import os.path
 import argparse
+from Crypto.Cipher import AES
+from Crypto.Protocol.KDF import PBKDF2
+import binascii
+import base64
+import string
 
+class KissEnc:
+    def __init__(self):
+        a = "WrxLl3rnA48iafgCy"
+        b = "a5e8d2e9c1721ae0e84ad660c472c1f3"
+        c = "CartKS$2141#"
+        self.derived_key = PBKDF2(a,c, dkLen=32, count=1000)
+        self.derived_key = binascii.hexlify(self.derived_key)[0:32]
+        self.cipher = AES.new(self.derived_key.decode('hex'), AES.MODE_CBC, b.decode('hex'))
+
+    def decrypt(self, data):
+        val = self.cipher.decrypt(base64.b64decode(data))
+        val = self.decode(val)
+        printable = set(string.printable)
+        val = filter(lambda x: x in printable, val)
+        val = 'https://redirect%s' % val[val.index('or.googlevideo.com'):]
+        return self.ensure_unicode(val)
+
+
+    def decode(self, text, k = 16):
+        '''
+        Remove the PKCS#7 padding from a text string
+
+        Made by https://gist.github.com/chrix2
+        '''
+        nl = len(text)
+        val = int(binascii.hexlify(text[-1]), 16)
+        if val > k:
+            raise ValueError('Input is not padded or padding is corrupt')
+
+        l = nl - val
+        return text[:l]
+
+    def ensure_unicode(self,v):
+        if isinstance(v, str):
+            v = v.decode('utf8')
+        return unicode(v)
+
+
+decoder = KissEnc()
 
 def get_episodes(url, kissanime=False):
     html = scraper.get(url).content
@@ -20,9 +62,9 @@ def get_episodes(url, kissanime=False):
 
     for link in tablesoup.findAll('a'):
         if kissanime:
-            links.append("%s%s" % ("http://kissanime.com", link.get('href')))
+            links.append(u"%s%s" % ("http://kissanime.com", link.get('href')))
         else:
-            links.append("%s%s" % ("http://kisscartoon.me", link.get('href')))
+            links.append(u"%s%s" % ("http://kisscartoon.me", link.get('href')))
     return links
 
 
@@ -35,7 +77,7 @@ def get_episode(url, quiet=False, quality=False):
     quali = []
     for src in valuesoup.findAll('option'):
         quali.append(src.text)
-        dlinks.append(base64.b64decode(src.get('value')))
+        dlinks.append(decoder.decrypt(src.get('value')))
     if not quiet:
         if quality:
             print("Quality : " + quali[len(quali)-1])
