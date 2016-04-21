@@ -1,0 +1,7 @@
+beautifulsoup4==4.4.1
+cfscrape==1.4.3
+futures==3.0.3
+lxml==3.5.0
+PyExecJS==1.1.0
+pySmartDL==1.2.4
+requests==2.9.1

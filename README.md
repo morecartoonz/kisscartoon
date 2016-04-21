@@ -5,6 +5,8 @@ Get's and downloads Videos from Kisscartoon and Kissanime
 # Changelog
 
 * Updated Link Decryption
+* Added Requirements.txt file for easy installation from nigamankit7
+
 
 # Usage
 
@@ -44,6 +46,7 @@ Python :
 * [BeautifulSoup4 ( bs4 )](https://pypi.python.org/pypi/beautifulsoup4)
 * [pySmartDL](https://pypi.python.org/pypi/pySmartDL/)
 * [pyCrypto](https://pypi.python.org/pypi/pycrypto)
+* [LXML EXE](https://pypi.python.org/pypi/lxml/3.5.0#downloads)
 
 All of the dependencies are available via pip and easy_install
 
