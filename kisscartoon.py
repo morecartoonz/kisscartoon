@@ -69,6 +69,7 @@ def get_episodes(url, kissanime=False):
 
 
 def get_episode(url, quiet=False, quality=False):
+    kissanime = 'kissanime.com' in url
     html = scraper.get(url).content
     soup = BeautifulSoup(html, "lxml")
     link = soup.find("select", {"id": "selectQuality"})
@@ -77,7 +78,10 @@ def get_episode(url, quiet=False, quality=False):
     quali = []
     for src in valuesoup.findAll('option'):
         quali.append(src.text)
-        dlinks.append(decoder.decrypt(src.get('value')))
+        if kissanime:
+            dlinks.append(base64.b64decode(src.get('value')))
+        else:
+            dlinks.append(decoder.decrypt(src.get('value')))
     if not quiet:
         if quality:
             print("Quality : " + quali[len(quali)-1])
