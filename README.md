@@ -4,8 +4,8 @@ Get's and downloads Videos from Kisscartoon and Kissanime
 
 # Changelog
 
-* Updated Link Decryption
-* Added Requirements.txt file for easy installation from nigamankit7
+* Fixed Link Decryption
+* Rewrote Core
 
 
 # Usage
