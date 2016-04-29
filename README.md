@@ -11,11 +11,11 @@ Get's and downloads Videos from Kisscartoon and Kissanime
 # Usage
 
 
-```./python kisscartoon.py <cartoon page> ```
+```./python kissgrab.py <cartoon page> ```
 
-If you don't want extra Information just the download add -q or --quiet
+If you want extra Information add -v or --verbose
 
-```./python kisscartoon.py -q <cartoon page> ```
+```./python kisscartoon.py -v <cartoon page> ```
 
 If you want to handle the downloading yourself use --only-links or -l to just print the links
 
@@ -25,9 +25,13 @@ If you want the links written to a File use --save-links or -s to save them to l
 
 ```./python kisscartoon.py -s <cartoon page> ```
 
-If you don't want the highest quality ( it's the default setting ) you can add -a or --low-quality to get the lowest available quality
+If you want the links as a HTML List use --html or -d to save them to download.html
 
-```./python kisscartoon.py -a <cartoon page> ```
+```./python kisscartoon.py -s <cartoon page> ```
+
+If you don't want the highest quality ( it's the default setting ) you can add -q or --low-quality to get the lowest available quality
+
+```./python kisscartoon.py -q <cartoon page> ```
 
 
 Those Operators are freely combinable
@@ -46,7 +50,6 @@ Python :
 * [BeautifulSoup4 ( bs4 )](https://pypi.python.org/pypi/beautifulsoup4)
 * [pySmartDL](https://pypi.python.org/pypi/pySmartDL/)
 * [pyCrypto](https://pypi.python.org/pypi/pycrypto)
-* [LXML EXE](https://pypi.python.org/pypi/lxml/3.5.0#downloads)
 
 All of the dependencies are available via pip and easy_install
 
