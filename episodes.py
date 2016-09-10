@@ -48,8 +48,13 @@ class KisscartoonEpisode(Episode):
         for child in links.children:
             if hasattr(child,'attr'):
 
+                #Gets rsk key (prehashed decryption key)
+                rskKey = session.post("http://kisscartoon.me/External/RSK")
+                while (rskKey.status_code == 404):
+                    rskKey = session.post("http://kisscartoon.me/External/RSK")
+
                 for linktype in Link.__subclasses__():
-                    link = linktype(child['value'], child.text)
+                    link = linktype(child['value'], child.text, rskKey.content)
                     decoded_link = None
                     if link.is_encoded():
                         try:
