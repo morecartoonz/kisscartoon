@@ -61,14 +61,13 @@ class AESLink(Link):
         return True
 
     def decode(self):
-        a = self.rsk
-        b = "a5e8d2e9c1721ae0e84ad660c472c1f3"
+        a = "a5e8d2e9c1721ae0e84ad660c472c1f3"
 
         #Hash rsk key to get decryption key
         sha = SHA256.new()
-        sha.update(a)
+        sha.update(self.rsk)
         encKey = sha.digest()
-        AES_KEY = AES.new(encKey, AES.MODE_CBC, b.decode('hex'))
+        AES_KEY = AES.new(encKey, AES.MODE_CBC, a.decode('hex'))
         val = AES_KEY.decrypt(base64.b64decode(self.link))
         unpad = lambda s: s[:-ord(s[len(s) - 1:])]
         val = unpad(val)
