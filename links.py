@@ -2,13 +2,15 @@ import re
 import base64
 from Crypto.Cipher import AES
 from Crypto.Protocol.KDF import PBKDF2
+from Crypto.Hash import SHA256
 import binascii
 
 
 class Link(object):
-    def __init__(self, link, quality):
+    def __init__(self, link, quality, rsk=None):
         self.link = link
         self.quality = quality
+        self.rsk = rsk
 
     def is_valid(self):
         regex = re.compile(
@@ -59,12 +61,13 @@ class AESLink(Link):
         return True
 
     def decode(self):
-        a = "WrxLl3rnA48iafgCy"
-        b = "a5e8d2e9c1721ae0e84ad660c472c1f3"
-        c = "CartKS$2141#"
-        derived_key = PBKDF2(a, c, dkLen=32, count=1000)
-        derived_key = binascii.hexlify(derived_key)[0:32]
-        AES_KEY = AES.new(derived_key.decode('hex'), AES.MODE_CBC, b.decode('hex'))
+        a = "a5e8d2e9c1721ae0e84ad660c472c1f3"
+
+        #Hash rsk key to get decryption key
+        sha = SHA256.new()
+        sha.update(self.rsk)
+        encKey = sha.digest()
+        AES_KEY = AES.new(encKey, AES.MODE_CBC, a.decode('hex'))
         val = AES_KEY.decrypt(base64.b64decode(self.link))
         unpad = lambda s: s[:-ord(s[len(s) - 1:])]
         val = unpad(val)
@@ -73,7 +76,6 @@ class AESLink(Link):
             return PlainLink(self.link, self.quality)
         else:
             return None
-
 
     def unpad(self, text, k=16):
         '''
