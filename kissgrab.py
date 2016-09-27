@@ -14,6 +14,7 @@ logging.basicConfig(level=logging.ERROR, format='[%(levelname)s] : %(message)s')
 def download(url, name, quiet=False):
     path = ".%s%s" % (os.sep, name)
     if os.path.isfile(path):
+        logging.info("The file at %s already exists. Skipping..." % (path))
         return
     else:
         obj = SmartDL(url, path)
@@ -31,6 +32,7 @@ parser.add_argument("-s", "--save-links", help="saves the links to links.txt", a
 parser.add_argument("-q", "--low-quality", help="reduces the quality", action="store_true")
 parser.add_argument("-d", "--html", help="outputs a link list to download.html", action="store_true")
 parser.add_argument("-v", "--verbose", help="make kissgrab tell you what it's doing", action="store_true")
+parser.add_argument("-o", "--no-overwrite", help="stops kissgrab from overwriting downloaded files / link lists", action="store_true")
 args = parser.parse_args()
 
 if args.verbose:
@@ -41,6 +43,7 @@ scraper = cfscrape.create_scraper()
 for show in Show.__subclasses__():
     showinstance = show(None, args.show)
     if showinstance.is_valid():
+        
         showinstance.get_episodes(scraper)
         logging.info('Show : {show}'.format(show=showinstance.show))
         for episode in showinstance.episodes:
@@ -57,7 +60,11 @@ for show in Show.__subclasses__():
                 else:
                     download(episode.links[0].link, '{title}.mp4'.format(title=episode.title))
         if args.save_links:
-            with open('links.txt', 'w') as linkfile:
+            open_mode = 'w'
+            if args.no_overwrite:
+                open_mode = 'a'
+                logging.info("Appending to existing Link List")
+            with open('links.txt', 'a') as linkfile:
                 for episode in showinstance.episodes:
                     if args.low_quality:
                         linkfile.write(episode.links[-1].link)
