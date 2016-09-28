@@ -59,15 +59,15 @@ for show in Show.__subclasses__():
 
         for episode in showinstance.episodes:
 
-            if episode.eptitle in foundEpTitles:
-                itemNo = foundEpTitles.index(episode.eptitle)
-                logging.info('{ep}\tfound in kissgrab.dat ({i})'.format(ep=episode.eptitle, i=itemNo))
+            if episode.eptitle.encode('utf-8') in foundEpTitles:
+                itemNo = foundEpTitles.index(episode.eptitle.encode('utf-8'))
+                logging.info('{ep}\tfound in kissgrab.dat ({i})'.format(ep=episode.eptitle.encode('utf-8'), i=itemNo))
             else:
-                foundEpTitles.append(episode.eptitle)
+                foundEpTitles.append(episode.eptitle.encode('utf-8'))
                 foundEpLinks.append(episode.sourcelink)
                 foundEpFilelinks.append('new')
-                itemNo = foundEpTitles.index(episode.eptitle)
-                logging.info('{ep}\tadded to kissgrab.dat ({i})'.format(ep=episode.eptitle, i=itemNo))
+                itemNo = foundEpTitles.index(episode.eptitle.encode('utf-8'))
+                logging.info('{ep}\tadded to kissgrab.dat ({i})'.format(ep=episode.eptitle.encode('utf-8'), i=itemNo))
         
         for i,val in enumerate(foundEpFilelinks):
 
