@@ -1,13 +1,14 @@
 from bs4 import BeautifulSoup, NavigableString
+import time
 from links import *
 
 
 class Episode(object):
-    def __init__(self, title, show, source):
-        self.title = title
-        self.show = show
-        self.source = source
-        self.links = None
+    def __init__(self, eptitle, showname, sourcelink):
+        self.eptitle = eptitle
+        self.showname = showname
+        self.sourcelink = sourcelink
+        self.filelinks = None
 
     def is_valid(self):
         return False
@@ -16,7 +17,7 @@ class Episode(object):
         raise NotImplementedError('Cant\'t get Links for generic type Episode!')
 
     def __repr__(self):
-        return '<show : {show}, episode : {episode}, source : {source}>'.format(show=self.show, episode=self.title, source=self.source)
+        return '<show : {show}, episode : {episode}, sourcelink : {sourcelink}>'.format(showname=self.showname, episode=self.eptitle, sourcelink=self.sourcelink)
 
 
 class KisscartoonEpisode(Episode):
@@ -24,27 +25,35 @@ class KisscartoonEpisode(Episode):
 
     def is_valid(self):
         # Basic Data Validation
-        if not str(self.source).startswith(self.BASE_URL):
+        if not str(self.sourcelink).startswith(self.BASE_URL):
 
             return False
-        slug = self.source[len(self.BASE_URL):]
+        slug = self.sourcelink[len(self.BASE_URL):]
         # Has to be Episode not Show!
         if sum(c is '/' for c in slug) != 1:
             return False
         if slug[-1] == '/':
             return False
-        self.title = slug.split('/')[1]
+        self.eptitle = slug.split('/')[1]
         #self.show = slug.split('/')[0]
         return True
 
-    def get_links(self, session):
-        episode_page = session.get(self.source).content
+    def get_filelinks(self, session, timeout):
+        episode_page = session.get(self.sourcelink).content
         parsed_page = BeautifulSoup(episode_page, 'html.parser')
-        links = parsed_page.find("select", {"id": "selectQuality"})
+        captcha = parsed_page.find("div", "g-recaptcha")
+        self.filelinks = []
+        if captcha != None:
+            captchaLink = PlainLink(captcha, 0)
+            self.filelinks.append(captchaLink)
+            return self.filelinks
+        else:
+            links = parsed_page.find("select", {"id": "selectQuality"})
+            time.sleep(timeout) #put a sleep here to try and avoid the captcha
+        
         if links is None:
             raise ValueError('No Episode links found for [{page}]'.format(page=self.source))
 
-        self.links = []
         for child in links.children:
             if hasattr(child,'attr'):
 
@@ -65,9 +74,9 @@ class KisscartoonEpisode(Episode):
                         continue
 
                     if decoded_link.is_valid():
-                        self.links.append(decoded_link)
+                        self.filelinks.append(decoded_link)
                         break
-        return self.links
+        return self.filelinks
 
 
 class KissanimeEpisode(KisscartoonEpisode):

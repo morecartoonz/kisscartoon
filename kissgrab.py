@@ -23,16 +23,15 @@ def download(url, name, quiet=False):
         except KeyboardInterrupt:
             obj.stop()
 
+timeout = 60 # in seconds
 
 parser = argparse.ArgumentParser()
 parser.add_argument("show")
-parser.add_argument("-l", "--only-links", help="only print's the links. doesn't download the files.",
-                    action="store_true")
+parser.add_argument("-l", "--only-links", help="only prints the links. doesn't download the files.", action="store_true")
 parser.add_argument("-s", "--save-links", help="saves the links to links.txt", action="store_true")
 parser.add_argument("-q", "--low-quality", help="reduces the quality", action="store_true")
 parser.add_argument("-d", "--html", help="outputs a link list to download.html", action="store_true")
 parser.add_argument("-v", "--verbose", help="make kissgrab tell you what it's doing", action="store_true")
-parser.add_argument("-o", "--no-overwrite", help="stops kissgrab from overwriting downloaded files / link lists", action="store_true")
 args = parser.parse_args()
 
 if args.verbose:
@@ -43,50 +42,93 @@ scraper = cfscrape.create_scraper()
 for show in Show.__subclasses__():
     showinstance = show(None, args.show)
     if showinstance.is_valid():
-        
+
         showinstance.get_episodes(scraper)
         logging.info('Show : {show}'.format(show=showinstance.show))
+        
+        foundEpTitles = []
+        foundEpLinks = []
+        foundEpFilelinks = []
+        
+        if os.path.isfile('kissgrab.dat'):
+            with open('kissgrab.dat', 'r') as datfile:
+                for line in datfile:
+                    foundEpTitles.append(line.split('@')[0].strip())
+                    foundEpLinks.append(line.split('@')[1].strip())
+                    foundEpFilelinks.append(line.split('@')[2].strip())
+
         for episode in showinstance.episodes:
-            episode.get_links(scraper)
+
+            if episode.eptitle in foundEpTitles:
+                itemNo = foundEpTitles.index(episode.eptitle)
+                logging.info('{ep}\tfound in kissgrab.dat ({i})'.format(ep=episode.eptitle, i=itemNo))
+            else:
+                foundEpTitles.append(episode.eptitle)
+                foundEpLinks.append(episode.sourcelink)
+                foundEpFilelinks.append('new')
+                itemNo = foundEpTitles.index(episode.eptitle)
+                logging.info('{ep}\tadded to kissgrab.dat ({i})'.format(ep=episode.eptitle, i=itemNo))
+        
+        for i,val in enumerate(foundEpFilelinks):
+
+            if ('captcha' in foundEpFilelinks[i] or 'new' in foundEpFilelinks[i] or foundEpFilelinks[i] == "None"):
+                episode.get_filelinks(scraper, timeout)
+
+                #if what we get is the captcha, just put "captcha" as the link
+                if episode.filelinks[0].quality == 0:
+                    foundEpFilelinks[i] = 'captcha'
+                    logging.info("{title}\tfinding file links\t...got a captcha".format(title=foundEpTitles[i]))
+                    break
+                elif args.low_quality:
+                    foundEpFilelinks[i] = episode.filelinks[-1].link
+                    logging.info("{title}\tfinding file links\tLQ link found!".format(title=foundEpTitles[i]))
+                else:
+                    foundEpFilelinks[i] = episode.filelinks[0].link
+                    logging.info("{title}\tfinding file links\tHQ link found!".format(title=foundEpTitles[i]))
+            else:
+                logging.info("{title}\tfinding file links\thas a link already".format(title=foundEpTitles[i]))
+        print
+        
+        with open('kissgrab.dat', 'w') as datfile:
+            logging.info("writing kissgrab.dat file...")
+            for i, val in enumerate(foundEpTitles):
+                datfile.write('{eptitle} @ {eplink} @ {filelink}\n'.format(eptitle=foundEpTitles[i], eplink=foundEpLinks[i], filelink=foundEpFilelinks[i]))
+                #print('{eptitle} @ {eplink} @ {filelink}\n'.format(eptitle=foundEpTitles[i], eplink=foundEpLinks[i], filelink=foundEpFilelinks[i]))
+            logging.info("Done!")
+
+        for i,val in enumerate(foundEpFilelinks):
             if args.only_links:
-                if args.low_quality:
-                    print episode.links[-1].link
-                else:
-                    print episode.links[0].link
+                print val
             elif not args.save_links and not args.html:
-                logging.info('Downloading : {file}'.format(file=episode.title))
-                if args.low_quality:
-                    download(episode.links[-1].link, '{title}.mp4'.format(title=episode.title))
-                else:
-                    download(episode.links[0].link, '{title}.mp4'.format(title=episode.title))
-        if args.save_links:
-            open_mode = 'w'
-            if args.no_overwrite:
-                open_mode = 'a'
-                logging.info("Appending to existing Link List")
-            with open('links.txt', 'a') as linkfile:
-                for episode in showinstance.episodes:
-                    if args.low_quality:
-                        linkfile.write(episode.links[-1].link)
-                    else:
-                        linkfile.write(episode.links[0].link)
-                    linkfile.write('\n')
-            logging.info('Saved links to links.txt')
-        if args.html:
-            with open('download.html', 'w') as linkfile:
-                linkfile.write('<html><head><title>{show}</title></head><body>'.format(show=showinstance.show))
-                for episode in showinstance.episodes:
-                    if args.low_quality:
-                        link = episode.links[-1].link
-                    else:
-                        link = episode.links[0].link
-                    req = urllib2.Request(link)
-                    res = urllib2.urlopen(req)
-                    finalurl = res.geturl()
-                    linkfile.write(
-                        '<a href="{link}" download="{file}">{title}</a>'.format(link=finalurl,
-                                                                                file=episode.title.replace(" ", ""),
-                                                                                title=episode.title))
-                    linkfile.write('<br>')
-                linkfile.write('</body></html>')
-            logging.info('Saved links to download.html')
+                if not ('captcha' in foundEpFilelinks[i] or 'new' in foundEpFilelinks[i] or foundEpFilelinks[i] == "None"):
+                    logging.info('Downloading : {file}'.format(file=foundEpTitles[i]))
+                    download(val, '{title}.mp4'.format(title=foundEpTitles[i]))
+
+            if args.save_links:
+                with open('links.txt', 'w') as linkfile:
+                    for episode in showinstance.episodes:
+                        if args.low_quality:
+                            linkfile.write(episode.filelinks[-1].link)
+                        else:
+                            linkfile.write(episode.filelinks[0].link)
+                        linkfile.write('\n')
+                logging.info('Saved links to links.txt')
+
+            if args.html:
+                with open('download.html', 'w') as linkfile:
+                    linkfile.write('<html><head><title>{show}</title></head><body>'.format(show=showinstance.show))
+                    for episode in showinstance.episodes:
+                        if args.low_quality:
+                            link = episode.filelinks[-1].link
+                        else:
+                            link = episode.filelinks[0].link
+                        req = urllib2.Request(link)
+                        res = urllib2.urlopen(req)
+                        finalurl = res.geturl()
+                        linkfile.write(
+                            '<a href="{link}" download="{file}">{title}</a>'.format(link=finalurl,
+                                                                                    file=episode.title.replace(" ", ""),
+                                                                                    title=episode.title))
+                        linkfile.write('<br>')
+                    linkfile.write('</body></html>')
+                logging.info('Saved links to download.html')
