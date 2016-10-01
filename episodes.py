@@ -52,7 +52,7 @@ class KisscartoonEpisode(Episode):
             time.sleep(timeout) #put a sleep here to try and avoid the captcha
         
         if links is None:
-            raise ValueError('No Episode links found for [{page}]'.format(page=self.source))
+            raise ValueError('No Episode links found for [{page}]'.format(page=self.sourcelink))
 
         for child in links.children:
             if hasattr(child,'attr'):
