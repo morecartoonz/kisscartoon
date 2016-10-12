@@ -23,11 +23,11 @@ def download(url, name, quiet=False):
         except KeyboardInterrupt:
             obj.stop()
 
-def writeDatFile(foundEpTitles, foundEpLinks, foundEpFilelinks):
+def writeDatFile(foundEpTitles, foundEpLinks, foundEpFilelinks, foundEpFileStatus):
     with open('kissgrab.dat', 'w') as datfile:
         logging.info("writing kissgrab.dat file...")
         for i, val in enumerate(foundEpTitles):
-            datfile.write('{eptitle} @ {eplink} @ {filelink}\n'.format(eptitle=foundEpTitles[i], eplink=foundEpLinks[i], filelink=foundEpFilelinks[i]))
+            datfile.write('{eptitle} @ {eplink} @ {filelink} @ {status}\n'.format(eptitle=foundEpTitles[i], eplink=foundEpLinks[i], filelink=foundEpFilelinks[i], status=foundEpFileStatus[i]))
             #print('{eptitle} @ {eplink} @ {filelink}\n'.format(eptitle=foundEpTitles[i], eplink=foundEpLinks[i], filelink=foundEpFilelinks[i]))
         logging.info("Done!")
 
@@ -59,6 +59,7 @@ for show in Show.__subclasses__():
         foundEpTitles = []
         foundEpLinks = []
         foundEpFilelinks = []
+        foundEpFileStatus = []
         
         # If we have a kissgrab.dat file, try to load from there
         if os.path.isfile('kissgrab.dat'):
@@ -67,6 +68,7 @@ for show in Show.__subclasses__():
                     foundEpTitles.append(line.split('@')[0].strip())
                     foundEpLinks.append(line.split('@')[1].strip())
                     foundEpFilelinks.append(line.split('@')[2].strip())
+                    foundEpFileStatus.append(line.split('@')[3].strip())
 
         # Compare the KissCartoon shows to those from our dat file
         for episode in showinstance.episodes:
@@ -78,6 +80,7 @@ for show in Show.__subclasses__():
                 foundEpTitles.append(episode.eptitle.encode('utf-8'))
                 foundEpLinks.append(episode.sourcelink)
                 foundEpFilelinks.append('new')
+                foundEpFileStatus.append('new')
                 itemNo = foundEpTitles.index(episode.eptitle.encode('utf-8'))
                 logging.info('{ep}\tadded to kissgrab.dat ({i})'.format(ep=episode.eptitle.encode('utf-8'), i=itemNo))
         
@@ -109,21 +112,23 @@ for show in Show.__subclasses__():
 
 
         # Now, write out the current state of the file
-        writeDatFile(foundEpTitles, foundEpLinks, foundEpFilelinks)
+        writeDatFile(foundEpTitles, foundEpLinks, foundEpFilelinks, foundEpFileStatus)
         
         # Loop through all the File Links & do what we should
         for i,val in enumerate(foundEpFilelinks):
             if args.only_links:
                 print val
             elif not args.save_links and not args.html:
-                if not ('captcha' in foundEpFilelinks[i] or 'new' in foundEpFilelinks[i] or foundEpFilelinks[i] == "None"):
+                if not ('captcha' in foundEpFilelinks[i] or 'new' in foundEpFilelinks[i] or foundEpFilelinks[i] == "None" or 'Grabbed' in foundEpFileStatus[i]):
                     try:
                         logging.info('Downloading : {file}'.format(file=foundEpTitles[i]))
                         download(val, '{title}.mp4'.format(title=foundEpTitles[i]))
+                        foundEpFileStatus[i] = "Grabbed"
+                        writeDatFile(foundEpTitles, foundEpLinks, foundEpFilelinks, foundEpFileStatus)
                     except:
                         foundEpFilelinks[i] = 'new'
                         # Now, write out the current state of the file
-                        writeDatFile(foundEpTitles, foundEpLinks, foundEpFilelinks)
+                        writeDatFile(foundEpTitles, foundEpLinks, foundEpFilelinks, foundEpFileStatus)
 
             if args.save_links:
                 with open('links.txt', 'w') as linkfile:
