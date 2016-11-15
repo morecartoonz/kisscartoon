@@ -115,6 +115,28 @@ for show in Show.__subclasses__():
         writeDatFile(foundEpTitles, foundEpLinks, foundEpFilelinks, foundEpFileStatus)
         
         # Loop through all the File Links & do what we should
+        if args.save_links:
+            with open('links.txt', 'w') as linkfile:
+                for i,val in enumerate(foundEpFilelinks):
+                    linkfile.write(val)
+                    linkfile.write('\n')
+            logging.info('Saved links to links.txt')
+
+        if args.html:
+            with open('download.html', 'w') as linkfile:
+                linkfile.write('<html><head><title>{show}</title></head><body>'.format(show=showinstance.show))
+                for i,val in enumerate(foundEpFilelinks):
+                    req = urllib2.Request(val)
+                    res = urllib2.urlopen(req)
+                    finalurl = res.geturl()
+                    linkfile.write(
+                        '<a href="{link}" download="{file}">{title}</a>'.format(link=finalurl,
+                                                                                file=foundEpTitles[i].replace(" ", ""),
+                                                                                title=foundEpTitles[i]))
+                    linkfile.write('<br>')
+                linkfile.write('</body></html>')
+            logging.info('Saved links to download.html')
+            
         for i,val in enumerate(foundEpFilelinks):
             if args.only_links:
                 print val
@@ -129,25 +151,3 @@ for show in Show.__subclasses__():
                         foundEpFilelinks[i] = 'new'
                         # Now, write out the current state of the file
                         writeDatFile(foundEpTitles, foundEpLinks, foundEpFilelinks, foundEpFileStatus)
-
-            if args.save_links:
-                with open('links.txt', 'w') as linkfile:
-                    for i,val in enumerate(foundEpFilelinks):
-                        linkfile.write(val)
-                    linkfile.write('\n')
-                logging.info('Saved links to links.txt')
-
-            if args.html:
-                with open('download.html', 'w') as linkfile:
-                    linkfile.write('<html><head><title>{show}</title></head><body>'.format(show=showinstance.show))
-                    for i,val in enumerate(foundEpFilelinks):
-                        req = urllib2.Request(val)
-                        res = urllib2.urlopen(req)
-                        finalurl = res.geturl()
-                        linkfile.write(
-                            '<a href="{link}" download="{file}">{title}</a>'.format(link=finalurl,
-                                                                                    file=foundEpTitles[i].replace(" ", ""),
-                                                                                    title=foundEpTitles[i]))
-                        linkfile.write('<br>')
-                    linkfile.write('</body></html>')
-                logging.info('Saved links to download.html')
