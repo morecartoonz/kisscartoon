@@ -6,7 +6,8 @@ Gets links and downloads videos from Kisscartoon and Kissanime
 
 * Fixed Link Decryption
 * Rewrote Core
-
+* Added background downloading, while main thread looks for file links
+* Added --grab-files option to explicitly request downloading
 
 # Usage
 
@@ -17,7 +18,11 @@ If you want extra Information add -v or --verbose
 
 ```./python kissgrab.py -v <cartoon page> ```
 
-If you want to handle the downloading yourself use --only-links or -l to just print the links
+If you want to download the files to the current folder use --grab-files or -g
+
+```./python kissgrab.py -g <cartoon page> ```
+
+If you want to handle the downloading yourself use --print-links or -l to just print the links
 
 ```./python kissgrab.py -l <cartoon page> ```
 
@@ -25,7 +30,7 @@ If you want the links written to a File use --save-links or -s to save them to l
 
 ```./python kissgrab.py -s <cartoon page> ```
 
-If you want the links as a HTML List use --html or -d to save them to download.html
+If you want the links as a HTML List use --save-html or -d to save them to download.html
 
 ```./python kissgrab.py -d <cartoon page> ```
 
@@ -37,7 +42,7 @@ If you don't want the highest quality ( it's the default setting ) you can add -
 Those Operators are freely combinable
 
 
-```./python kissgrab.py -q -s http://kisscartoon.me/Cartoon/Aqua-Teen-Hunger-Force-Season-10```
+```./python kissgrab.py -q -g -s http://kisscartoon.me/Cartoon/Aqua-Teen-Hunger-Force-Season-10```
 
 # Requirements
 

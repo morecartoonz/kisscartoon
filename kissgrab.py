@@ -1,7 +1,8 @@
 import argparse
 import logging
 import os
-
+import Queue
+import threading,time
 import cfscrape
 from pySmartDL import SmartDL
 import urllib2
@@ -10,41 +11,68 @@ from shows import *
 
 logging.basicConfig(level=logging.ERROR, format='[%(levelname)s] : %(message)s')
 
+class Downloader(object):
 
-def download(url, name, quiet=False):
-    path = ".%s%s" % (os.sep, name)
-    if os.path.isfile(path):
-        logging.info("The file at %s already exists. Skipping..." % (path))
-        return
-    else:
-        obj = SmartDL(url, path)
-        try:
-            obj.start()
-        except KeyboardInterrupt:
-            obj.stop()
+    def __init__(self, interval=1):
+        self.interval = interval
+        thread = threading.Thread(target=self.run, args=())
+        thread.daemon = True                            # Daemonize thread
+        thread.start()                                  # Start the execution
+
+    def run(self):
+        while dlQueue.not_empty:
+            index = dlQueue.get()
+            logging.info('Downloader : Grabbed an item. {0} remaining'.format(dlQueue.qsize()))
+
+            path = ".%s%s" % (os.sep, '{title}.mp4'.format(title=foundEpTitles[index]))
+            if os.path.isfile(path):
+                logging.info("Downloader : The file at %s already exists. Skipping..." % (path))
+                foundEpFileStatus[index] = "Grabbed"
+                dlQueue.task_done()
+            else:
+                logging.info('Downloader : Getting {file}'.format(file=foundEpTitles[index]))
+                obj = SmartDL(foundEpFilelinks[index], path, progress_bar=False)
+                try:
+                    obj.start(blocking=True)
+                    if obj.isSuccessful():
+                        foundEpFileStatus[index] = "Grabbed"
+                        logging.info("Downloader : Grabbed '%s' in %s" % (obj.get_dest(), obj.get_dl_time(human=True)))
+                        dlQueue.task_done()
+                    else:
+                        foundEpFilelinks[index] = 'new'
+                        logging.info("Downloader : Error grabbing '%s'" % obj.get_dest())
+                        dlQueue.task_done()
+                        for e in obj.get_errors():
+                                logging.error(str(e))
+                except KeyboardInterrupt:
+                    obj.stop()
+
+            time.sleep(self.interval)
 
 def writeDatFile(foundEpTitles, foundEpLinks, foundEpFilelinks, foundEpFileStatus):
     with open('kissgrab.dat', 'w') as datfile:
         logging.info("writing kissgrab.dat file...")
         for i, val in enumerate(foundEpTitles):
             datfile.write('{eptitle} @ {eplink} @ {filelink} @ {status}\n'.format(eptitle=foundEpTitles[i], eplink=foundEpLinks[i], filelink=foundEpFilelinks[i], status=foundEpFileStatus[i]))
-            #print('{eptitle} @ {eplink} @ {filelink}\n'.format(eptitle=foundEpTitles[i], eplink=foundEpLinks[i], filelink=foundEpFilelinks[i]))
         logging.info("Done!")
 
 
-TIMEOUT = 60 # in seconds
-
 parser = argparse.ArgumentParser()
 parser.add_argument("show")
-parser.add_argument("-l", "--only-links", help="only prints the links. doesn't download the files.", action="store_true")
+parser.add_argument("-l", "--print-links", help="only prints the links. doesn't download the files.", action="store_true")
 parser.add_argument("-s", "--save-links", help="saves the links to links.txt", action="store_true")
+parser.add_argument("-d", "--save-html", help="outputs a link list to download.html", action="store_true")
+parser.add_argument("-g", "--grab-files", help="download the files to the current directory", action="store_true")
 parser.add_argument("-q", "--low-quality", help="reduces the quality", action="store_true")
-parser.add_argument("-d", "--html", help="outputs a link list to download.html", action="store_true")
 parser.add_argument("-v", "--verbose", help="make kissgrab tell you what it's doing", action="store_true")
 args = parser.parse_args()
 
 if args.verbose:
     logging.getLogger().setLevel(logging.INFO)
+
+TIMEOUT = 60 # in seconds
+dlQueue = Queue.Queue()
+downloader = Downloader()
 
 scraper = cfscrape.create_scraper()
 
@@ -75,16 +103,17 @@ for show in Show.__subclasses__():
 
             if episode.eptitle.encode('utf-8') in foundEpTitles:
                 itemNo = foundEpTitles.index(episode.eptitle.encode('utf-8'))
-                logging.info('{ep}\tfound in kissgrab.dat ({i})'.format(ep=episode.eptitle.encode('utf-8'), i=itemNo))
+                logging.info('{ep}{msg} ({i})'.format(ep=episode.eptitle.encode('utf-8').ljust(65), msg='found in kissgrab.dat', i=itemNo))
             else:
                 foundEpTitles.append(episode.eptitle.encode('utf-8'))
                 foundEpLinks.append(episode.sourcelink)
                 foundEpFilelinks.append('new')
                 foundEpFileStatus.append('new')
                 itemNo = foundEpTitles.index(episode.eptitle.encode('utf-8'))
-                logging.info('{ep}\tadded to kissgrab.dat ({i})'.format(ep=episode.eptitle.encode('utf-8'), i=itemNo))
+                logging.info('{ep}{msg} ({i})'.format(ep=episode.eptitle.encode('utf-8').ljust(65), msg='added to kissgrab.dat', i=itemNo))
         
         # Now loop through the file links and try to grab from the given EpLink
+        logging.info('Looking for file links')
         for i,val in enumerate(foundEpFilelinks):
 
             if ('captcha' in foundEpFilelinks[i] or 'new' in foundEpFilelinks[i] or foundEpFilelinks[i] == "None"):
@@ -98,31 +127,46 @@ for show in Show.__subclasses__():
                 #if what we get is the captcha, just put "captcha" as the link
                 if episode.filelinks[0].quality == 0:
                     foundEpFilelinks[i] = 'captcha'
-                    logging.info("{title}\tfinding file links\t...got a captcha".format(title=foundEpTitles[i]))
+                    logging.info("{title}{msg}".format(title=foundEpTitles[i].ljust(65), msg='got a captcha'))
+                    writeDatFile(foundEpTitles, foundEpLinks, foundEpFilelinks, foundEpFileStatus)
                     break
                 elif args.low_quality:
                     foundEpFilelinks[i] = episode.filelinks[-1].link
-                    logging.info("{title}\tfinding file links\tLQ link found!".format(title=foundEpTitles[i]))
+                    logging.info("{title}{msg}".format(title=foundEpTitles[i].ljust(65), msg='LQ link found!'))
+                    writeDatFile(foundEpTitles, foundEpLinks, foundEpFilelinks, foundEpFileStatus)
+                    if args.grab_files:
+                        dlQueue.put(i)
                 else:
                     foundEpFilelinks[i] = episode.filelinks[0].link
-                    logging.info("{title}\tfinding file links\tHQ link found!".format(title=foundEpTitles[i]))
+                    logging.info("{title}{msg}".format(title=foundEpTitles[i].ljust(65), msg='HQ link found!'))
+                    writeDatFile(foundEpTitles, foundEpLinks, foundEpFilelinks, foundEpFileStatus)
+                    if args.grab_files:
+                        dlQueue.put(i)
             else:
-                logging.info("{title}\tfinding file links\thas a link already".format(title=foundEpTitles[i]))
-        print
+                if ('Grabbed' in foundEpFileStatus[i]):
+                    logging.info("{title}{msg}".format(title=foundEpTitles[i].ljust(65), msg='already have it'))
+                else:
+                    if args.grab_files:
+                        dlQueue.put(i)
 
+        if dlQueue.not_empty:
+            logging.info("Waiting for Downloader to exit ...")
+        dlQueue.join()
 
         # Now, write out the current state of the file
         writeDatFile(foundEpTitles, foundEpLinks, foundEpFilelinks, foundEpFileStatus)
-        
+
+      
         # Loop through all the File Links & do what we should
         if args.save_links:
             with open('links.txt', 'w') as linkfile:
                 for i,val in enumerate(foundEpFilelinks):
                     linkfile.write(val)
                     linkfile.write('\n')
+                linkfile.write('\n')
             logging.info('Saved links to links.txt')
 
-        if args.html:
+        if args.save_html:
             with open('download.html', 'w') as linkfile:
                 linkfile.write('<html><head><title>{show}</title></head><body>'.format(show=showinstance.show))
                 for i,val in enumerate(foundEpFilelinks):
@@ -137,17 +181,8 @@ for show in Show.__subclasses__():
                 linkfile.write('</body></html>')
             logging.info('Saved links to download.html')
             
-        for i,val in enumerate(foundEpFilelinks):
-            if args.only_links:
+        if args.print_links:
+            for i,val in enumerate(foundEpFilelinks):
                 print val
-            elif not args.save_links and not args.html:
-                if not ('captcha' in foundEpFilelinks[i] or 'new' in foundEpFilelinks[i] or foundEpFilelinks[i] == "None" or 'Grabbed' in foundEpFileStatus[i]):
-                    try:
-                        logging.info('Downloading : {file}'.format(file=foundEpTitles[i]))
-                        download(val, '{title}.mp4'.format(title=foundEpTitles[i]))
-                        foundEpFileStatus[i] = "Grabbed"
-                        writeDatFile(foundEpTitles, foundEpLinks, foundEpFilelinks, foundEpFileStatus)
-                    except:
-                        foundEpFilelinks[i] = 'new'
-                        # Now, write out the current state of the file
-                        writeDatFile(foundEpTitles, foundEpLinks, foundEpFilelinks, foundEpFileStatus)
+                print '\n'
+            print '\n'
